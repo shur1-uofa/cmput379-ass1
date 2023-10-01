@@ -1,11 +1,12 @@
 #include "../headers/processTable.hpp"
 
 
-void ProcessTable::addEntry( pid_t pid, std::string command ) {
+void ProcessTable::addEntry( pid_t pid, std::string command, timeval currentTime ) {
     PCB pcb;
     pcb.pid = pid; 
     pcb.status = RUNNING;
     pcb.command = command;
+    pcb.createdTime = currentTime;
     this->processTable.push_back( pcb );
     this->recent_pid = pid;
 }
@@ -24,10 +25,6 @@ void ProcessTable::changeStatus( pid_t pid, ProcessStatus status ) {
         }
     }
     return; 
-}
-
-pid_t ProcessTable::getRecentPID() {
-    return recent_pid;
 }
 
 std::list<PCB>::iterator ProcessTable::begin() {

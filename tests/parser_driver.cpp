@@ -81,4 +81,29 @@ TEST(parse_single_command_with_input_and_output_redirection_in_background) {
     ASSERT_TRUE( content.BACKGROUND_FLAG );
 }
 
+// TEST(cargs_of_single_command) {
+//     std::string line = "command"; 
+//     CommandParser::Content content = CommandParser::parseLine(line);
+//     ASSERT_EQUAL( content.cmd, "command" );
+//     ASSERT_EQUAL( content.args.size(), 0 );
+
+//     char** cargs = content.to_cargs();
+//     ASSERT_EQUAL( cargs[0], "command");
+//     ASSERT_EQUAL( cargs[1], NULL);
+// }
+
+// TEST(cargs_of_command_with_arguments) {
+//     std::string line = "command arg1 arg2 arg3"; 
+//     CommandParser::Content content = CommandParser::parseLine(line);
+//     ASSERT_EQUAL( content.cmd, "command" );
+//     ASSERT_EQUAL( content.args.size(), 3 );
+
+//     char** cargs = content.to_cargs();
+//     ASSERT_EQUAL( cargs[0], "command");
+//     ASSERT_EQUAL( cargs[1], "arg1");
+//     ASSERT_EQUAL( cargs[2], "arg2");
+//     ASSERT_EQUAL( cargs[3], "arg3");
+//     ASSERT_EQUAL( cargs[4], NULL);
+// }
+
 TEST_MAIN();

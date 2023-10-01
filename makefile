@@ -5,10 +5,10 @@ compile_shell: compile_parser compile_processTable
 	g++ shell379.cpp commandParser.o processTable.o -o shell379.exe 
 
 compile_parser:
-	g++ ./impl/commandParser.cpp -c commandParser.o -Wall 
+	g++ -c ./impl/commandParser.cpp -o commandParser.o -Wall 
 
 compile_processTable:
-	g++ ./impl/processTable.cpp -c processTable.o -Wall
+	g++ -c ./impl/processTable.cpp -o processTable.o -Wall
 
 
 test_parser: compile_parser
