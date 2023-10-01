@@ -1,3 +1,9 @@
+run: compile_shell
+	./shell379.exe
+
+compile_shell: compile_parser compile_processTable
+	g++ shell379.cpp commandParser.o processTable.o -o shell379.exe 
+
 compile_parser:
 	g++ ./impl/commandParser.cpp -c commandParser.o -Wall 
 
