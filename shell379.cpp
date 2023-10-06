@@ -18,6 +18,14 @@ LIST OF QUESTIONS:
 - getrusage's seconds is just zero. It doesn't get updated at all.
 - getrusage( RUSAGE_CHILDREN ) returns a time 3 times the expected. Why?
 
+- for my sigaction, I chose to not ignore any signals that come through. What are your thoughts?
+
+- for my time calculation, I took the difference of main process user time from rusage( SELF ) to calculate active child process times.
+Is this actually accurate or not?   
+
+- For spawning a child process and redirecting input/output, I took advantage of the fact that exec retains I/O streams of the original process.
+What do you think about this approach? 
+
 - Do you have any other feedback? I know there are many other ways to complete this but I want to hear
 other approaches as well as faults with my approach if there are any. 
 */
