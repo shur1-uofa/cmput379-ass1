@@ -22,6 +22,9 @@ test_process_table: compile_processTable
 test:
 	make test_parser
 	make test_process_table
+
+compress:
+	tar -caf ass1.tar.gz ./impl ./headers shell379.cpp
 	
 clean:
 	rm *.o 

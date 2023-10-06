@@ -13,16 +13,13 @@
 #define LINE_LENGTH 100 // Max # of characters in an input line
 
 /*
-LIST OF BUGS:
-I would appreciate it if you could figure it out because I am just done.
+LIST OF QUESTIONS:
+- getrusage is supposed to print microseconds but it obviously doesn't. Why does it contradict the docs?
+- getrusage's seconds is just zero. It doesn't get updated at all.
+- getrusage( RUSAGE_CHILDREN ) returns a time 3 times the expected. Why?
 
-- When a child process ends, the console loops infinitely and keeps prints "SHELL:\n"
-
-- Calculation for child process does not work at all. 
-Setting the current user time from getrusage and saving it inside PCB and calculating process user time by calculating
-the difference between that time and the current user time but just prints 0
-
-There's likely others but the first one has been getting in the way for me to properly test this program.
+- Do you have any other feedback? I know there are many other ways to complete this but I want to hear
+other approaches as well as faults with my approach if there are any. 
 */
 
 bool Running = true;
@@ -33,9 +30,13 @@ void printJobs();
 
 void printCompletedTimes();
 
+int differenceInSeconds(timeval now, timeval past);
+
+int inSeconds(timeval now);
+
 void suspendProcess(pid_t pid);
 
-void waitProcess(pid_t pid);
+int waitProcess(pid_t pid, int options);
 
 void resumeProcess(pid_t pid);
 
@@ -47,14 +48,7 @@ void spawnProcess(std::string line, CommandParser::Content cmdLine);
 
 void handleChildTermination(int signum, siginfo_t *info, void *context) 
 {
-    // Contrary to documentation, info->si_pid does not return the child process id. 
-    // #undef si_pid 
-    // std::cout << "SIGNAL CALLED FROM CHILD " << (int) info->_sifields._sigchld.si_pid << std::endl;
-    pid_t pid = waitpid(-1, NULL, WNOHANG); 
-    while ( pid > 0 ) {
-        PROCESS_TABLE.removeEntry( pid );
-        pid = waitpid(-1, NULL, WNOHANG);
-    }
+    while ( waitProcess(-1, WNOHANG) > 0 );
 }
 
 int main() {
@@ -67,7 +61,22 @@ int main() {
 
     while( Running ) {
         std::string line; 
-        std::cout << "SHELL379: ";
+        /*
+        Without the below checks, getline will not fail causing an infinite loop with line being empty. 
+        https://man7.org/linux/man-pages/man7/signal.7.html : E_INTR
+        According to this, when a blocking syscall or library call is interrupted, that call can fall into an errorful state
+        SA_RESTART doesn't work for getline(), likely because it's not UNIX-specific. 
+        However, you can check the error code with std::istream.fail() and clear it with clear()
+
+        If I used read() and write() syscalls instead, I can use SA_RESTART signal flag instead.
+        Ironically, I would have had an easier time using lower-level APIs than the higher level APIs I am using.  
+        */
+        if ( std::cin.fail() ) {
+            std::cin.clear();
+        }
+        else {
+            std::cout << "SHELL379: ";
+        }
         getline(std::cin, line);
         CommandParser::Content cmdLine = CommandParser::parseLine(line);
 
@@ -83,7 +92,7 @@ int main() {
             suspendProcess( stoi(cmdLine.args[0]) );
         }
         else if ( cmdLine.cmd == "wait" ) {
-            waitProcess( stoi(cmdLine.args[0]) );
+            waitProcess( stoi(cmdLine.args[0]), 0 );
         }
         else if ( cmdLine.cmd == "resume" ) {
             resumeProcess( stoi(cmdLine.args[0]) );
@@ -96,9 +105,6 @@ int main() {
         }
         else if ( cmdLine.cmd != "" ) {
             spawnProcess(line, cmdLine);
-        }
-        else {
-            // FIXME: WHY DOES IT LOOP INFINITELY?????
         }
     }
 
@@ -124,9 +130,10 @@ void printJobs() {
         }
         // There might be some rounding error since I am not counting micro seconds but I don't care 
         // FIXME: But of course, it doesn't work anyways because why not! 
-        std::cout << ' ' << usage.ru_utime.tv_sec - pcb.createdTime.tv_sec << ' ';
+        std::cout << ' ' << differenceInSeconds(usage.ru_utime, pcb.createdTime) << ' ';
         std::cout << pcb.command << std::endl;
     }
+    std::cout << std::endl;
     printCompletedTimes();
 }
 
@@ -137,9 +144,17 @@ void printCompletedTimes() {
     } 
     else {
         std::cout << "Completed processes:\n";
-        std::cout << "User time = " << usage.ru_utime.tv_sec << " seconds\n";
-        std::cout << "Sys time = " << usage.ru_stime.tv_sec << " seconds\n";
+        std::cout << "User time = " << inSeconds(usage.ru_utime) << " seconds\n";
+        std::cout << "Sys time = " << inSeconds(usage.ru_utime) << " seconds\n";
     }
+}
+
+int differenceInSeconds(timeval now, timeval past) {
+    return (now.tv_sec - past.tv_sec) + (now.tv_usec - past.tv_usec)/100;
+}
+
+int inSeconds(timeval time) {
+    return time.tv_sec + time.tv_usec/100;
 }
 
 void spawnProcess(std::string line, CommandParser::Content cmdLine) {
@@ -161,7 +176,7 @@ void spawnProcess(std::string line, CommandParser::Content cmdLine) {
         }
         PROCESS_TABLE.addEntry( pid, line, currentTime );
         if ( !cmdLine.BACKGROUND_FLAG ) {
-            waitProcess( pid );
+            waitProcess( pid, 0 );
         }
     }
     // Child process
@@ -217,17 +232,17 @@ void killProcess(pid_t pid) {
     }
 }
 
-void waitProcess(pid_t pid) {
-    if ( waitpid( pid, NULL, 0 ) < 0 ) {
-        perror("Waiting for process has failed");
+int waitProcess(pid_t pid, int options) {
+    int res = waitpid( pid, NULL, options );
+    if ( res > 0 ) {
+        PROCESS_TABLE.removeEntry( res );
     }
+    return res; 
 }
 
 void exitShell() { 
-    while( PROCESS_TABLE.size() > 0 ) {
-        wait(NULL);
-    }
-   printCompletedTimes();
-   exit(0);
+    while( waitProcess(-1, 0) > 0 );
+    printCompletedTimes();
+    exit(0);
 }   
 
